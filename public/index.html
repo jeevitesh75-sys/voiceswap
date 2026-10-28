@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoiceSwap - change your voice</title>
+<meta name="theme-color" content="#0f1020">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header><h1>Voice<span>Swap</span></h1><p>Your voice note, in a voice you have permission to use</p></header>
+<main>
+<div id="banner" class="note warn" hidden></div>
+<nav class="tabs">
+  <button data-tab="convert" class="on">Convert</button>
+  <button data-tab="voices">My voices</button>
+  <button data-tab="swap">Voice 2 &rarr; 1</button>
+</nav>
+
+<section id="t-convert" class="tab">
+  <div class="card" id="gotShared" hidden>
+    <h2>Voice note received</h2>
+    <audio id="sharedPlayer" controls></audio>
+  </div>
+  <div class="card" id="pickCard">
+    <h2>1. Your audio</h2>
+    <label class="drop"><input type="file" id="audio" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac,.amr" hidden>
+      <b id="aname">Tap to choose an audio</b><small>or use Share from WhatsApp / Instagram (see below)</small></label>
+    <details><summary>How to use Share from WhatsApp</summary>
+      <ol><li>Install VoiceSwap: Chrome menu &rarr; Add to Home screen &rarr; Install.</li>
+      <li>In WhatsApp, record a voice note but do not send it. Or long-press a voice note you already have.</li>
+      <li>Tap the menu (three dots) &rarr; Share &rarr; VoiceSwap.</li>
+      <li>Pick a voice here, tap Change voice, then Share the result back.</li></ol>
+      <small>If your WhatsApp has no Share option for voice notes, tap Choose an audio above instead.</small>
+    </details>
+  </div>
+  <div class="card">
+    <h2>2. Voice to use</h2>
+    <select id="voiceSel"></select>
+    <label class="chk"><input type="checkbox" id="tag" checked> Add "AI voice" label inside the file</label>
+    <button id="go" class="big">Change voice</button>
+    <p class="note" id="engNote"></p>
+  </div>
+</section>
+
+<section id="t-voices" class="tab" hidden>
+  <div class="card"><h2>My voices</h2><div id="vlist"></div></div>
+  <div class="card">
+    <h2>Save a new voice</h2>
+    <label>Name<input type="text" id="vname" maxlength="40" placeholder="My voice"></label>
+    <label class="drop"><input type="file" id="vfile" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac" hidden><b id="vfname">Tap to choose a clear sample</b><small id="vhint">10 to 60 seconds, one person, no music</small></label>
+    <label class="chk consent"><input type="checkbox" id="vconsent"> I own this voice, or the person gave me permission to use it. I will not use it to trick or harm anyone. <a href="terms.html" target="_blank">Terms</a></label>
+    <button id="vsave" class="big">Save voice</button>
+  </div>
+</section>
+
+<section id="t-swap" class="tab" hidden>
+  <div class="card">
+    <h2>Voice 2 &rarr; Voice 1</h2>
+    <p class="note">Audio A is the voice you want. Audio B is the speech you want to change. The result is B's words in A's voice.</p>
+    <label class="drop"><input type="file" id="sA" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac" hidden><b id="sAn">Audio A: the voice to copy</b><small>5 seconds or more of clear speech</small></label>
+    <label class="drop"><input type="file" id="sB" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac" hidden><b id="sBn">Audio B: the speech to convert</b><small>up to 2 minutes</small></label>
+    <label class="chk consent"><input type="checkbox" id="sconsent"> I own voice A, or the person gave me permission to use it. I will not use it to trick or harm anyone. <a href="terms.html" target="_blank">Terms</a></label>
+    <button id="sgo" class="big">Convert</button>
+  </div>
+</section>
+
+<section id="busy" class="card" hidden>
+  <h2 id="busyT">Working...</h2><div class="bar"><i id="barI"></i></div><p class="note" id="busyN"></p>
+</section>
+
+<section id="result" class="card" hidden>
+  <h2>Done</h2>
+  <p class="note" id="rnote"></p>
+  <p class="lbl">Original</p><audio id="orig" controls></audio>
+  <p class="lbl">New voice</p><audio id="newv" controls></audio>
+  <label>Format<select id="fmt"><option value="m4a">M4A (works almost everywhere)</option><option value="ogg">OGG Opus (WhatsApp voice style)</option><option value="mp3">MP3</option></select></label>
+  <button id="share" class="big">Share</button>
+  <a id="dl" class="big btn ghost" download>Download</a>
+  <button id="again" class="ghost">Do another</button>
+  <p class="note" id="aiLabel"></p>
+</section>
+</main>
+<footer>Only use voices you have permission to use. Results are deleted after <span id="ttl">24</span> hours.</footer>
+<script src="app.js"></script>
+</body></html>

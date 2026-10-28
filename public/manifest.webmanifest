@@ -1,0 +1,23 @@
+{
+  "name": "VoiceSwap",
+  "short_name": "VoiceSwap",
+  "description": "Change a voice note into a voice you have permission to use.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1020",
+  "theme_color": "#0f1020",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [ { "name": "audio", "accept": ["audio/*", ".opus", ".ogg", ".oga", ".m4a", ".mp3", ".wav", ".aac", ".amr"] } ]
+    }
+  }
+}
