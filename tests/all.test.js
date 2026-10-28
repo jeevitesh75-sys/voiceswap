@@ -31,6 +31,16 @@ test("presets work (deep lowers pitch, robot runs)", async () => {
   await e.convert({ source: src, preset: "robot", out: path.join(tmp, "r.wav") }); assert.ok(fs.statSync(path.join(tmp, "r.wav")).size > 5000);
   await assert.rejects(e.convert({ source: src, preset: "nope", out: path.join(tmp, "x.wav") }), /Unknown preset/);
 });
+test("female and male presets aim for a typical pitch, and the voice stays less 'child-like' than a plain pitch shift", async () => {
+  const man = await voice("man", 115), e = makeBasic(), fo = path.join(tmp, "fem.wav");
+  await e.convert({ source: man, preset: "female", out: fo }); near(await f0Of(fo), 215, 0.1); near(await audio.duration(fo), await audio.duration(man), 0.03);
+  const woman = await voice("woman", 220), mo = path.join(tmp, "mal.wav"); await e.convert({ source: woman, preset: "male", out: mo }); near(await f0Of(mo), 115, 0.1);
+  const same = path.join(tmp, "same.wav"); const r = await e.convert({ source: woman, preset: "female", out: same }); assert.match(r.note, /already/);
+  // brightness check: formant-aware shift must be darker than a plain "shift everything" (which gives the child sound)
+  const plain = path.join(tmp, "plain.wav"); await audio.run("ffmpeg", ["-y", "-v", "error", "-i", man, "-af", "rubberband=pitch=1.87:formant=shifted", plain]);
+  const centroid = async f => { const x = await audio.pcm16k(f); let n = 0, d = 0; const N = 2048; for (let k = 1; k < 120; k++) { let re = 0, im = 0; for (let i = 0; i < N; i++) { const w = x[8000 + i] || 0; re += w * Math.cos(2 * Math.PI * k * 8 * i / 16000 / 1); im -= w * Math.sin(2 * Math.PI * k * 8 * i / 16000); } const m = Math.hypot(re, im); n += m * k; d += m; } return n / d; };
+  assert.ok(await centroid(fo) < await centroid(plain), "formant-aware version should be darker than the plain shift");
+});
 test("http engine sends source+target and writes the answer", async () => {
   const src = await voice("hs", 120, 2), tgt = await voice("ht", 200, 2), out = path.join(tmp, "h.wav"); let seen;
   const fetchFn = async (url, o) => { seen = { url, auth: o.headers.Authorization, keys: [...o.body.keys()] }; return { ok: true, arrayBuffer: async () => fs.readFileSync(src) }; };

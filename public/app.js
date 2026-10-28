@@ -26,7 +26,7 @@ async function loadVoices() {
   const sel = $("voiceSel"), keep = store.get("vs_active") || sel.value; sel.innerHTML = "";
   const add = (v, n, g) => { const o = document.createElement("option"); o.value = v; o.textContent = n; (g || sel).appendChild(o); };
   if (S.voices.length) { const g = document.createElement("optgroup"); g.label = "My voices"; sel.appendChild(g); S.voices.forEach(v => add(v.id, v.name, g)); }
-  if (S.cfg.presetsOn) { const g = document.createElement("optgroup"); g.label = "Fun voices"; sel.appendChild(g); S.cfg.presets.forEach(p => add(p.id, p.name, g)); }
+  if (S.cfg.presetsOn) { const g = document.createElement("optgroup"); g.label = "Quick voices"; sel.appendChild(g); S.cfg.presets.forEach(p => add(p.id, p.name, g)); }
   if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
   sel.onchange = () => store.set("vs_active", sel.value);
   const box = $("vlist"); box.innerHTML = ""; if (!S.voices.length) box.innerHTML = '<p class="note">No saved voices yet. Add one below.</p>';
