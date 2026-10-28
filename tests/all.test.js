@@ -123,6 +123,31 @@ test("app: voice 2 -> voice 1 needs consent and works", async () => {
   } finally { app.server.close(); }
 });
 
+test("converter address is registered by the notebook, remembered, and used by the http engine", async () => {
+  const seen = []; const fetchFn = async (url, o) => { seen.push(url); return { ok: true, arrayBuffer: async () => fs.readFileSync(path.join(tmp, "src.wav")) }; };
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "vs-data-")), env = { TRUST_PROXY: "0", VC_ENGINE: "http", CONVERTER_KEY: "secret-word-123" };
+  const mk = () => { const a = createApp({ dataDir, env, fetchFn }); return new Promise(r => a.server.listen(0, "127.0.0.1", () => r({ a, base: "http://127.0.0.1:" + a.server.address().port }))); };
+  let { a, base } = await mk();
+  try {
+    assert.equal((await (await fetch(base + "/api/config")).json()).converterConnected, false);
+    const reg = (key, url) => fetch(base + "/api/converter/register", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    assert.equal((await reg("wrong-word-12345", "https://a.trycloudflare.com/")).status, 401);
+    assert.equal((await reg("secret-word-123", "http://insecure.example/")).status, 400);
+    assert.equal((await reg("secret-word-123", "https://abc-def.trycloudflare.com/")).status, 200);
+    assert.equal((await (await fetch(base + "/api/config")).json()).converterConnected, true);
+    const sample = await voice("rg1", 200, 8), speech = await voice("rg2", 120, 3); fs.copyFileSync(speech, path.join(tmp, "src.wav"));
+    const v = (await (await fetch(base + "/api/voices", { method: "POST", headers: H, body: form({ name: "R", consent: "1" }, { sample }) })).json()).voice;
+    let r = await fetch(base + "/api/convert", { method: "POST", headers: H, body: form({ voice: v.id }, { audio: speech }) }); const j = await waitJob(base, (await r.json()).id);
+    assert.equal(j.status, "done", j.error); assert.equal(seen[0], "https://abc-def.trycloudflare.com/");                     // the engine called the address the notebook sent
+    assert.equal((await reg("secret-word-123", "https://new-one.trycloudflare.com/")).status, 200);                           // a new address replaces the old one
+    r = await fetch(base + "/api/convert", { method: "POST", headers: H, body: form({ voice: v.id }, { audio: speech }) }); await waitJob(base, (await r.json()).id); assert.equal(seen[1], "https://new-one.trycloudflare.com/");
+    a.server.close(); ({ a, base } = await mk());                                                                           // restart: the address is remembered from the file
+    assert.equal((await (await fetch(base + "/api/config")).json()).converterConnected, true);
+  } finally { a.server.close(); }
+  const noKey = createApp({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "vs-data-")), env: { TRUST_PROXY: "0", VC_ENGINE: "http" }, fetchFn }); await new Promise(r => noKey.server.listen(0, "127.0.0.1", r));
+  try { assert.equal((await fetch(`http://127.0.0.1:${noKey.server.address().port}/api/converter/register`, { method: "POST", headers: { Authorization: "Bearer x" }, body: "{}" })).status, 503); } finally { noKey.server.close(); }
+});
+
 test("app: with a GPU engine, presets are hidden; daily limit works; static files and sweep", async () => {
   const fake = { name: "http", label: "x", convert: async ({ source, out }) => { fs.copyFileSync(source, out); return { note: "ok" }; } };
   const app = createApp({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "vs-data-")), env: { TRUST_PROXY: "0", PER_DAY: "1" }, engine: fake, ttlMs: 50 });

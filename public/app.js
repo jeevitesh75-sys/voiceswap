@@ -14,6 +14,7 @@ pickName($("audio"), $("aname")); pickName($("vfile"), $("vfname"), $("vhint"));
 (async function init() {
   try { S.cfg = await api("/api/config"); } catch (e) { return err("Cannot reach the server. " + e.message); }
   $("engNote").textContent = S.cfg.engineLabel; $("engNote").className = S.cfg.engine === "basic" ? "note warn" : "note"; $("ttl").textContent = S.cfg.ttlHours;
+  if (S.cfg.engine === "http" && !S.cfg.converterConnected) err("The AI voice converter is not connected right now. The owner must start it.");
   const q = new URLSearchParams(location.search);
   if (q.get("err")) err(q.get("err"));
   if (q.get("pending")) { S.pending = q.get("pending"); $("gotShared").hidden = false; $("sharedPlayer").src = "/api/pending/" + S.pending; $("aname").textContent = "Using the audio you shared"; history.replaceState(null, "", "/"); }

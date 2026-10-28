@@ -19,13 +19,18 @@ It cannot change your voice live inside WhatsApp or phone calls. Android does no
 `basic` works out of the box but it only changes pitch and tone. **It cannot copy a real person's voice.** For a real clone you need the AI converter (Seed-VC) on a GPU.
 
 ### Real cloning with a free GPU (no card): Google Colab
-1. Open `colab/VoiceSwap_Converter.ipynb` in Google Colab (colab.research.google.com -> Upload).
-2. Runtime -> Change runtime type -> T4 GPU. Then Runtime -> Run all.
-3. At the bottom it prints `CONVERTER_URL` and `CONVERTER_KEY`.
-4. On Render -> your service -> Environment, add `VC_ENGINE=http`, `CONVERTER_URL`, `CONVERTER_KEY`. Save (Render restarts).
-5. Keep the Colab page open. When Colab stops (idle or after some hours) the address stops working and you must run it again and update `CONVERTER_URL` (the free address changes each time). This is fine for testing and demos, not for a real paid service. For that, rent a GPU and run `/converter` with its Dockerfile.
+One-time on Render -> your service -> Environment: add `VC_ENGINE` = `http` and `CONVERTER_KEY` = a secret word you choose (8+ letters). Save.
 
-The converter server was tested with a fake model (request, key check, file handling). The real Seed-VC model, the Colab install step and the free tunnel were **not** tested. If a Colab step shows a red error, copy it and send it to your developer.
+Each time you want AI cloning:
+1. Open colab.research.google.com on your phone (Chrome menu -> Desktop site helps). File -> Upload notebook -> choose `VoiceSwap_Converter.ipynb`.
+2. In the first code cell type your website address (`SITE_URL`) and the same secret word (`KEY`).
+3. Runtime -> Change runtime type -> T4 GPU. Then Runtime -> Run all. First time takes 5-10 minutes.
+4. When it prints `CONNECTED to your website`, the site uses the AI voice. The notebook sends its new address to the website by itself, now and every minute, so you never copy an address.
+5. Keep the Colab page open. If Colab stops, the site shows "converter is not connected" until you run it again.
+
+This is fine for testing and demos, not for a paid service. For that, rent a GPU and run `/converter` (see its Dockerfile) with a fixed address in `CONVERTER_URL`.
+
+The converter server and the registration were tested with a fake model. The real Seed-VC model, the Colab install and the free tunnel were **not** tested. If a Colab step shows a red error, copy it and send it to your developer.
 
 ## Run it on your computer or in Termux (to try it)
 

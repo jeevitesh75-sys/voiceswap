@@ -4,18 +4,20 @@
 //            Authorization: Bearer CONVERTER_KEY (optional)      ->  200 audio/wav bytes
 const fs = require("fs");
 
-function makeHttp({ url, key, fetchFn = fetch, timeoutMs = 600e3, steps = 25 }) {
-  if (!url) throw new Error("CONVERTER_URL is not set");
+function makeHttp({ url, getUrl, key, fetchFn = fetch, timeoutMs = 600e3, steps = 25 }) {
+  if (!url && !getUrl) throw new Error("CONVERTER_URL is not set");
   return {
     name: "http",
     label: "AI voice conversion (high quality).",
     async convert({ source, target, preset, out }) {
       if (preset) throw new Error("Preset voices use the basic engine");
+      const target_url = getUrl ? getUrl() : url;
+      if (!target_url) throw new Error("The voice converter is not connected yet. The owner must start it (Colab).");
       const fd = new FormData();
       fd.append("source", new Blob([fs.readFileSync(source)], { type: "audio/wav" }), "source.wav");
       fd.append("target", new Blob([fs.readFileSync(target)], { type: "audio/wav" }), "target.wav");
       fd.append("steps", String(steps));
-      let r; try { r = await fetchFn(url, { method: "POST", body: fd, headers: key ? { Authorization: "Bearer " + key } : {}, signal: AbortSignal.timeout(timeoutMs) }); }
+      let r; try { r = await fetchFn(target_url, { method: "POST", body: fd, headers: key ? { Authorization: "Bearer " + key } : {}, signal: AbortSignal.timeout(timeoutMs) }); }
       catch { throw new Error("The voice converter is offline. The owner must start it again (Colab) and update CONVERTER_URL."); }
       if (!r.ok) { let t = ""; try { t = (await r.text()).slice(0, 200); } catch {} throw new Error(`Voice converter error ${r.status}. ${t}`); }
       const buf = Buffer.from(await r.arrayBuffer()); if (buf.length < 1000) throw new Error("The voice converter returned an empty file.");

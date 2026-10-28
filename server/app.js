@@ -1,19 +1,20 @@
 "use strict";
 const http = require("http"), fs = require("fs"), path = require("path"), os = require("os");
 const { json, fail, readJson, sendFile, parseMultipart, Counter, rid } = require("./util");
-const { Jobs } = require("./jobs"), { Voices, hashIp, USER_RE } = require("./voices"), { makeEngine, PRESETS } = require("./engines"), audio = require("./audio");
+const { Registry } = require("./registry"), { Jobs } = require("./jobs"), { Voices, hashIp, USER_RE } = require("./voices"), { makeEngine, PRESETS } = require("./engines"), audio = require("./audio");
 
 const MB = 1048576, AUDIO_EXT = new Set([".opus", ".ogg", ".oga", ".m4a", ".mp3", ".wav", ".aac", ".amr", ".3gp", ".webm", ".flac", ".mp4", ".caf", ".wma"]);
 
 function createApp(cfg = {}) {
   const env = cfg.env || process.env, root = path.join(__dirname, ".."), pub = path.join(root, "public");
   const dataDir = cfg.dataDir || env.DATA_DIR || path.join(os.tmpdir(), "voiceswap");
-  const engine = cfg.engine || makeEngine(env, cfg.fetchFn || fetch);
+  const registry = new Registry(path.join(dataDir, "converter.json"), null);
+  const engine = cfg.engine || makeEngine(env, cfg.fetchFn || fetch, registry);
   const maxSeconds = +env.MAX_SECONDS || 120, ttlMs = cfg.ttlMs || (+env.RESULT_HOURS || 24) * 3600e3, perDay = +env.PER_DAY || 0;
   const maxUp = (+env.MAX_UPLOAD_MB || 25) * MB;
   const jobs = new Jobs({ dir: path.join(dataDir, "jobs"), engine, ttlMs, maxSeconds }), voices = new Voices(path.join(dataDir, "voices"), { maxPerUser: +env.MAX_VOICES || 10 });
   const pendDir = path.join(dataDir, "pending"); fs.mkdirSync(pendDir, { recursive: true });
-  const limits = cfg.limits || {}, apiHits = new Counter(), upHits = new Counter(), daily = new Counter();
+  const limits = cfg.limits || {}, regHits = new Counter(), apiHits = new Counter(), upHits = new Counter(), daily = new Counter();
   const ip = req => String((env.TRUST_PROXY !== "0" && req.headers["x-forwarded-for"]) || req.socket.remoteAddress || "?").split(",")[0].trim();
   const userOf = (req, u) => { const v = req.headers["x-user"] || u.searchParams.get("u") || ""; if (!USER_RE.test(v)) throw fail(400, "Missing user id. Reload the page."); return v; };
 
@@ -52,7 +53,16 @@ function createApp(cfg = {}) {
   async function api(req, res, u, p, who) {
     const m = req.method;
     if (p === "/api/config" && m === "GET") return json(res, 200, { engine: engine.name, engineLabel: engine.label, maxSeconds, maxVoices: voices.maxPerUser, ttlHours: Math.round(ttlMs / 3600e3), minSample: voices.minSeconds, maxSample: voices.maxSeconds,
+      converterConnected: engine.name === "http" ? !!(registry.get() || env.CONVERTER_URL) : null, converterSeen: engine.name === "http" ? registry.at : null,
       presets: Object.entries(PRESETS).map(([id, v]) => ({ id: "preset:" + id, name: v.name })), presetsOn: engine.name === "basic" || env.PRESETS_ALWAYS === "1" });
+    if (p === "/api/converter/register" && m === "POST") {              // called by the Colab notebook
+      const key = env.CONVERTER_KEY; if (!key) throw fail(503, "CONVERTER_KEY is not set on the website.");
+      if (regHits.hit(who, 60e3) > 30) throw fail(429, "Too many tries.");
+      const given = String(req.headers.authorization || ""), ok = given.length === key.length + 7 && require("crypto").timingSafeEqual(Buffer.from(given), Buffer.from("Bearer " + key));
+      if (!ok) throw fail(401, "Wrong key.");
+      const url = registry.clean((await readJson(req, 5000)).url); if (!url) throw fail(400, "Send an https address as {\"url\": \"https://...\"}.");
+      registry.set(url); return json(res, 200, { ok: true });
+    }
     if (p === "/api/voices" && m === "GET") return json(res, 200, { voices: voices.list(userOf(req, u)) });
     if (p === "/api/voices" && m === "POST") {
       const user = userOf(req, u); if (upHits.hit(who, 3600e3) > (limits.uploads || 40)) throw fail(429, "Too many uploads from your network. Try again later.");
@@ -121,6 +131,6 @@ function createApp(cfg = {}) {
   const sweepPending = () => { try { const now = Date.now(); for (const n of fs.readdirSync(pendDir)) { const f = path.join(pendDir, n); if (now - fs.statSync(f).mtimeMs > 2 * 3600e3) fs.rmSync(f, { force: true }); } } catch {} };
   jobs.startSweeper(); const t = setInterval(() => { apiHits.sweep(60e3); upHits.sweep(3600e3); daily.sweep(864e5); sweepPending(); }, 600e3); t.unref();
   server.on("close", () => { clearInterval(jobs.timer); clearInterval(t); });
-  return { server, jobs, voices, handler, engine };
+  return { server, jobs, voices, handler, engine, registry };
 }
 module.exports = { createApp };
