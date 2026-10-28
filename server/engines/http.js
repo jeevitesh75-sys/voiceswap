@@ -15,7 +15,8 @@ function makeHttp({ url, key, fetchFn = fetch, timeoutMs = 600e3, steps = 25 }) 
       fd.append("source", new Blob([fs.readFileSync(source)], { type: "audio/wav" }), "source.wav");
       fd.append("target", new Blob([fs.readFileSync(target)], { type: "audio/wav" }), "target.wav");
       fd.append("steps", String(steps));
-      const r = await fetchFn(url, { method: "POST", body: fd, headers: key ? { Authorization: "Bearer " + key } : {}, signal: AbortSignal.timeout(timeoutMs) });
+      let r; try { r = await fetchFn(url, { method: "POST", body: fd, headers: key ? { Authorization: "Bearer " + key } : {}, signal: AbortSignal.timeout(timeoutMs) }); }
+      catch { throw new Error("The voice converter is offline. The owner must start it again (Colab) and update CONVERTER_URL."); }
       if (!r.ok) { let t = ""; try { t = (await r.text()).slice(0, 200); } catch {} throw new Error(`Voice converter error ${r.status}. ${t}`); }
       const buf = Buffer.from(await r.arrayBuffer()); if (buf.length < 1000) throw new Error("The voice converter returned an empty file.");
       fs.writeFileSync(out, buf); return { note: "AI voice conversion done." };

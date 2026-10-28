@@ -16,7 +16,16 @@ It cannot change your voice live inside WhatsApp or phone calls. Android does no
 | `basic` (default) | free, no GPU | moves pitch and tone only. It is NOT an exact clone. | fast |
 | `http` or `replicate` | needs a GPU | real AI voice conversion | fast on a GPU, very slow on a free CPU |
 
-`basic` works out of the box. For a real clone, run the converter in `/converter` on a GPU machine and set `VC_ENGINE=http`. The converter and the `replicate` engine are written but were **not tested** against the real services.
+`basic` works out of the box but it only changes pitch and tone. **It cannot copy a real person's voice.** For a real clone you need the AI converter (Seed-VC) on a GPU.
+
+### Real cloning with a free GPU (no card): Google Colab
+1. Open `colab/VoiceSwap_Converter.ipynb` in Google Colab (colab.research.google.com -> Upload).
+2. Runtime -> Change runtime type -> T4 GPU. Then Runtime -> Run all.
+3. At the bottom it prints `CONVERTER_URL` and `CONVERTER_KEY`.
+4. On Render -> your service -> Environment, add `VC_ENGINE=http`, `CONVERTER_URL`, `CONVERTER_KEY`. Save (Render restarts).
+5. Keep the Colab page open. When Colab stops (idle or after some hours) the address stops working and you must run it again and update `CONVERTER_URL` (the free address changes each time). This is fine for testing and demos, not for a real paid service. For that, rent a GPU and run `/converter` with its Dockerfile.
+
+The converter server was tested with a fake model (request, key check, file handling). The real Seed-VC model, the Colab install step and the free tunnel were **not** tested. If a Colab step shows a red error, copy it and send it to your developer.
 
 ## Run it on your computer or in Termux (to try it)
 

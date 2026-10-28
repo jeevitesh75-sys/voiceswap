@@ -47,6 +47,7 @@ test("http engine sends source+target and writes the answer", async () => {
   await makeHttp({ url: "http://conv/x", key: "k", fetchFn }).convert({ source: src, target: tgt, out });
   assert.deepEqual(seen.keys.sort(), ["source", "steps", "target"]); assert.equal(seen.auth, "Bearer k"); assert.ok(fs.existsSync(out));
   await assert.rejects(makeHttp({ url: "http://c", fetchFn: async () => ({ ok: false, status: 500, text: async () => "boom" }) }).convert({ source: src, target: tgt, out }), /converter error 500/);
+  await assert.rejects(makeHttp({ url: "http://c", fetchFn: async () => { throw new Error("fetch failed"); } }).convert({ source: src, target: tgt, out }), /converter is offline/);
 });
 test("replicate engine creates, polls, downloads", async () => {
   const src = await voice("rs", 120, 2), tgt = await voice("rt", 200, 2), out = path.join(tmp, "rep.wav"), calls = [];

@@ -30,7 +30,7 @@ async function applyFilter(source, out, chain, rate) {
 function makeBasic() {
   return {
     name: "basic",
-    label: "Basic mode: moves your pitch and tone toward the chosen voice. It is not an exact clone.",
+    label: "Basic mode (no AI): only changes pitch and tone. It can NOT copy a person's real voice. For real cloning the owner must connect the AI converter.",
     async convert({ source, target, preset, out, rate = 24000 }) {
       if (preset) {
         const p = PRESETS[preset]; if (!p) throw new Error("Unknown preset voice");
